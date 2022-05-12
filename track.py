@@ -1,5 +1,7 @@
 # import useful libraries
 import cv2
+import json
+import numpy as np
 import sys
 from random import randint
 
@@ -14,8 +16,8 @@ def runTracker(video_name, tracker_name):
         tracker_name    -- string, must be one of the options in trackerTypes
 
     Return:
-        nothing, but creates two files - one video with bounding boxes drawn on it, and one text
-        file with bounding boxes, labels, and time stamps
+        nothing, but creates two files - one video with bounding boxes drawn on it, and one json
+        file with timestamps and bounding boxes
     """
     # Set video to load
     video_path = video_name + '.mp4'
@@ -54,6 +56,9 @@ def runTracker(video_name, tracker_name):
     for bbox in bboxes:
         multiTracker.add(createTrackerByName(tracker_name), frame, bbox)
 
+    # empty dictionary to add bounding boxes to
+    bboxes_dict = {}
+
     # process video and track objects
     while cap.isOpened():
         success, frame = cap.read()
@@ -62,6 +67,10 @@ def runTracker(video_name, tracker_name):
 
         # get updated location of objects in subsequent frames through tracking
         success, boxes = multiTracker.update(frame)
+
+        # add bounding boxes to dictionary
+        timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+        bboxes_dict[timestamp] = np.array2string(boxes, max_line_width=None)
 
         # draw tracked objects
         for i, newbox in enumerate(boxes):
@@ -82,6 +91,10 @@ def runTracker(video_name, tracker_name):
     cap.release()
     result.release()
     cv2.destroyWindow('MultiTracker')
+
+    # convert dictionary holding bounding boxes to JSON file
+    with open(video_name + '_' + tracker_name + '.json', 'w') as f:
+        json.dump(bboxes_dict, f)
 
 
 def createTrackerByName(tracker_name):
@@ -158,7 +171,7 @@ def selectBoxes(frame):
 
 def main():
     # expected input format: python track.py [video name] [tracker name]
-    # if video name or tracker name are wrong in any way, errors will pop up later on and the
+    # if the video name or tracker name are wrong in any way, errors will pop up later on and the
     # program will quit without crashing
     if len(sys.argv) == 3:
         video_name = sys.argv[1]

@@ -14,4 +14,4 @@ From a folder with the tracker and the video, run:
 python tracker.py [video name] [tracker name]
 ```
 
-This will output two files: a video with the bounding boxes drawn on it for easy evaluation, and a text file with ordered bounding boxes.
+This will output two files: a video with the bounding boxes drawn on it for easy evaluation, and a json file with ordered timestamps and bounding boxes. In the JSON file, the keys are timestamps in seconds and the values are the bounding boxes (ordered according to their initial labeling). Each bounding box will be in the format `[top left x pixel. top left y pixel.   bounding box width.   bounding box height.]`. 
