@@ -4,13 +4,21 @@ import sys
 from random import randint
 
 # set allowable tracker types
-trackerTypes = ['BOOSTING', 'MIL', 'KCF','TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+tracker_types = ['BOOSTING', 'MIL', 'KCF','TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
-def runTracker():
+def runTracker(video_name, tracker_name):
+    """ Runs an OpenCV tracker on a video.
+
+    Arguments:
+        video_name      -- string, filename of the video to track objects in without file suffix
+        tracker_name    -- string, must be one of the options in trackerTypes
+
+    Return:
+        nothing, but creates two files - one video with bounding boxes drawn on it, and one text
+        file with bounding boxes, labels, and time stamps
+    """
     # Set video to load
-    video_folder = "shark_human_data/"
-    video_prefix = "20200805_OneSharkSUPSurfers"
-    video_path = video_folder + video_prefix + '.mp4'
+    video_path = video_name + '.mp4'
 
     # Create a video capture object to read videos
     cap = cv2.VideoCapture(video_path)
@@ -25,59 +33,34 @@ def runTracker():
     height, width = frame.shape[:2]
     file_size = (width, height)
 
-    # We want to save the output to a video file
-    output_filename = video_prefix + '_KCF.mp4'
-    output_frames_per_second = cap.get(cv2.CAP_PROP_FPS)
-
+    # set up video file to write output bounding boxes to
+    output_video = video_name + "_" + tracker_name + ".mp4"
+    output_fps = cap.get(cv2.CAP_PROP_FPS)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    result = cv2.VideoWriter(output_filename,  
+    result = cv2.VideoWriter(output_video,  
                             fourcc, 
-                            output_frames_per_second, 
+                            output_fps, 
                             file_size)
 
-    print("input fps: ", output_frames_per_second)
+    # get user initialized boxes
+    print("To select boxes, drag a box around your desired object with your cursor, starting in" \
+        " the upper left corner. If you want to discard a box you drew, don't press any keys and" \
+        " simply redraw the correct box. To confirm a box selection, press enter, then enter" \
+        " again if you want to select more boxes, or q if that was your last box.")
+    bboxes, colors = selectBoxes(frame)
 
-    ## Select boxes
-    bboxes = []
-    colors = [] 
-
-    # OpenCV's selectROI function doesn't work for selecting multiple objects in Python
-    # So we will call this function in a loop till we are done selecting all objects
-    while True:
-        # draw bounding boxes over objects
-        # selectROI's default behaviour is to draw box starting from the center
-        # when fromCenter is set to false, you can draw box starting from top left corner
-        bbox = cv2.selectROI('MultiTracker', frame)
-        bboxes.append(bbox)
-        colors.append((randint(0, 255), randint(0, 255), randint(0, 255)))
-        print("Press q to quit selecting boxes and start tracking")
-        print("Press any other key to select next object")
-        k = cv2.waitKey(0) & 0xFF
-        print(k)
-        if (k == 113):  # q is pressed
-            cv2.destroyWindow('MultiTracker')
-            break
-            
-    print('Selected bounding boxes {}'.format(bboxes))
-
-    # Specify the tracker type
-    trackerType = "KCF"
-
-    # Create MultiTracker object
+    # create and initialize MultiTracker object
     multiTracker = cv2.MultiTracker_create()
-
-    # Initialize MultiTracker
     for bbox in bboxes:
-        multiTracker.add(createTrackerByName(trackerType), frame, bbox)
+        multiTracker.add(createTrackerByName(tracker_name), frame, bbox)
 
-
-    # Process video and track objects
+    # process video and track objects
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
             break
 
-        # get updated location of objects in subsequent frames
+        # get updated location of objects in subsequent frames through tracking
         success, boxes = multiTracker.update(frame)
 
         # draw tracked objects
@@ -86,32 +69,22 @@ def runTracker():
             p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
             cv2.rectangle(frame, p1, p2, colors[i], 2, 1)
 
-        # write frame to out video
+        # write frame to out video and show it
         result.write(frame)
-        
-        # show frame
         cv2.imshow('MultiTracker', frame)
-        
 
-        # quit on ESC button
-        if cv2.waitKey(1) & 0xFF == 27:  # Esc pressed
+        # quit on esc
+        if cv2.waitKey(1) & 0xFF == 27:
             cv2.destroyWindow('MultiTracker')
             break
 
-        
-    # Stop when the video is finished and release recording
+    # stop when the video is finished
     cap.release()
     result.release()
     cv2.destroyWindow('MultiTracker')
 
 
-    cap = cv2.VideoCapture("20200805_OneSharkSUPSurfers_KCF.mp4")
-    output_frames_per_second = result.get(cv2.CAP_PROP_FPS)
-    print("output fps: ", output_frames_per_second)
-    cap.release()
-
-
-def createTrackerByName(trackerType):
+def createTrackerByName(tracker_name):
     """ Creates an OpenCV tracker given an input type.
 
     Arguments:
@@ -121,33 +94,76 @@ def createTrackerByName(trackerType):
         an OpenCV tracker object
     """
     # Create a tracker based on tracker name
-    if trackerType == trackerTypes[0]:
+    if tracker_name == tracker_types[0]:
         tracker = cv2.TrackerBoosting_create()
-    elif trackerType == trackerTypes[1]:
+    elif tracker_name == tracker_types[1]:
         tracker = cv2.TrackerMIL_create()
-    elif trackerType == trackerTypes[2]:
+    elif tracker_name == tracker_types[2]:
         tracker = cv2.TrackerKCF_create()
-    elif trackerType == trackerTypes[3]:
+    elif tracker_name == tracker_types[3]:
         tracker = cv2.TrackerTLD_create()
-    elif trackerType == trackerTypes[4]:
+    elif tracker_name == tracker_types[4]:
         tracker = cv2.TrackerMedianFlow_create()
-    elif trackerType == trackerTypes[5]:
+    elif tracker_name == tracker_types[5]:
         tracker = cv2.TrackerGOTURN_create()
-    elif trackerType == trackerTypes[6]:
+    elif tracker_name == tracker_types[6]:
         tracker = cv2.TrackerMOSSE_create()
-    elif trackerType == trackerTypes[7]:
+    elif tracker_name == tracker_types[7]:
         tracker = cv2.TrackerCSRT_create()
     else:
         tracker = None
         print('Incorrect tracker name')
         print('Available trackers are:')
-        for t in trackerTypes:
+        for t in tracker_types:
             print(t)
     return tracker
 
+
+def selectBoxes(frame):
+    """ Given an initial frame, runs an interface which allows the user to draw bounding boxes
+    around objects to track. Outputs those bounding boxes
+
+    Arguments:
+        frame       -- image, first frame read from a video
+
+    Return:
+        bboxes      -- a list of bounding boxes representing initial coordinates for objects
+        colors      -- assigned colors for those bounding boxes in video output
+    """
+
+    bboxes = []
+    colors = [] 
+
+    # OpenCV's selectROI function doesn't work for selecting multiple objects in Python
+    # So we will call this function in a loop till we are done selecting all objects
+    while True:
+        # draw bounding boxes over objects
+        print("Selecting object! Press enter to confirm your box once drawn.")
+        bbox = cv2.selectROI('MultiTracker', frame)
+        bboxes.append(bbox)
+        colors.append((randint(0, 255), randint(0, 255), randint(0, 255)))
+
+        # box selected, check if the user wants another
+        print("Press q to quit selecting boxes and start tracking, or press enter again to" \
+            " select next object")
+        k = cv2.waitKey(0) & 0xFF
+        print(k)
+        if (k == 113):  # q is pressed
+            cv2.destroyWindow('MultiTracker')
+            break
+            
+    print('Selected bounding boxes {}'.format(bboxes))
+    return bboxes, colors
+
+
 def main():
-    if len(sys.argv) == 1:
-        runTracker()
+    # expected input format: python track.py [video name] [tracker name]
+    # if video name or tracker name are wrong in any way, errors will pop up later on and the
+    # program will quit without crashing
+    if len(sys.argv) == 3:
+        video_name = sys.argv[1]
+        tracker_name = sys.argv[2]
+        runTracker(video_name, tracker_name)
     else:
         raise Exception("Incorrect number of arguments: %s" % sys.argv)
 
