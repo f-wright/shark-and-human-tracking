@@ -1,6 +1,5 @@
 # import useful libraries
 import cv2
-from __future__ import print_function
 import sys
 from random import randint
 
@@ -145,3 +144,12 @@ def createTrackerByName(trackerType):
         for t in trackerTypes:
             print(t)
     return tracker
+
+def main():
+    if len(sys.argv) == 1:
+        runTracker()
+    else:
+        raise Exception("Incorrect number of arguments: %s" % sys.argv)
+
+if __name__ == '__main__':
+    sys.exit(main())  
