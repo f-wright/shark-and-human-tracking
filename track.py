@@ -6,7 +6,7 @@ import sys
 from random import randint
 
 # set allowable tracker types
-tracker_types = ['BOOSTING', 'MIL', 'KCF','TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
 def runTracker(video_name, tracker_name):
     """ Runs an OpenCV tracker on a video.
